@@ -4,6 +4,8 @@ import asyncio
 import os
 from typing import Any, Dict, List, Optional
 
+from pydub import AudioSegment
+
 from ..api.tts_client import (
     AzureTTSClient,
     GoogleCloudTTSClient,
@@ -223,3 +225,55 @@ class AudioService:
             "created_at": file_stats.st_ctime,
             "modified_at": file_stats.st_mtime,
         }
+
+    async def generate_complete_dialogue_audio(
+        self, dialogue: Dialogue, filename: str
+    ) -> str:
+        """Generate a single audio file containing all dialogue messages.
+
+        Args:
+            dialogue: The dialogue object containing messages
+            filename: The filename for the output audio file
+
+        Returns:
+            str: Path to the generated complete audio file
+        """
+        try:
+            # First, ensure all messages have audio generated
+            await self.generate_audio_for_dialogue(dialogue)
+
+            # Create a combined audio segment
+            combined_audio = AudioSegment.empty()
+            # 0.5 second pause between messages
+            silence_between_messages = AudioSegment.silent(duration=500)
+
+            for i, message in enumerate(dialogue.messages):
+                if message.audio_file_path and os.path.exists(
+                    message.audio_file_path
+                ):
+                    # Load the audio segment
+                    audio_segment = AudioSegment.from_file(
+                        message.audio_file_path
+                    )
+
+                    # Add the message audio
+                    combined_audio += audio_segment
+
+                    # Add silence between messages (except after last)
+                    if i < len(dialogue.messages) - 1:
+                        combined_audio += silence_between_messages
+
+            # Ensure filename has proper extension
+            if not filename.endswith((".mp3", ".wav")):
+                filename = filename + ".mp3"
+
+            # Save the combined audio
+            output_path = os.path.join(self.output_directory, filename)
+            combined_audio.export(output_path, format="mp3")
+
+            return output_path
+
+        except Exception as e:
+            raise Exception(
+                f"Error generating complete dialogue audio: {str(e)}"
+            )

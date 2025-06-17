@@ -2,6 +2,11 @@
 """Test different voices for different speakers."""
 
 import asyncio
+import os
+import sys
+
+# Add the parent directory to the path to allow imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.language_tutor.api.tts_client import GTTSClient
 

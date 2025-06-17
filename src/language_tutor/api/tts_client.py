@@ -276,16 +276,18 @@ class GTTSClient(TTSClient):
     ) -> bytes:
         """Synthesize speech using gTTS."""
         try:
-            # Map voice names to different language variants for variety
-            voice_lang_map = {
-                "user": "fr",  # Standard French
-                "assistant": "fr-CA",  # Canadian French for variety
-                "default": "fr",
+            # Map voice names to different speech settings for variety
+            voice_config = {
+                "user": {"lang": "fr", "slow": False},  # Normal speed
+                "assistant": {"lang": "fr", "slow": True},  # Slower voice
+                "default": {"lang": "fr", "slow": False},
             }
 
-            # Select language variant based on voice_name
-            if voice_name and voice_name.lower() in voice_lang_map:
-                lang_code = voice_lang_map[voice_name.lower()]
+            # Select configuration based on voice_name
+            if voice_name and voice_name.lower() in voice_config:
+                config = voice_config[voice_name.lower()]
+                lang_code = config["lang"]
+                is_slow = config["slow"]
             else:
                 # Extract language code from language_code parameter
                 lang_code = (
@@ -293,9 +295,10 @@ class GTTSClient(TTSClient):
                     if "-" in language_code
                     else "fr"
                 )
+                is_slow = False
 
-            # Use gTTS to generate speech with selected language variant
-            tts = gTTS(text=text, lang=lang_code, slow=False)
+            # Use gTTS to generate speech with selected configuration
+            tts = gTTS(text=text, lang=lang_code, slow=is_slow)
 
             # Create a temporary file path
             temp_file = tempfile.NamedTemporaryFile(
