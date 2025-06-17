@@ -23,6 +23,8 @@ dependencies = [
     "asyncio-throttle>=1.0.2",
     "webdataset>=0.2.111",
     "gtts>=2.5.4",
+    "speechrecognition>=3.10.0",
+    "pyaudio>=0.2.11",
 ]
 
 [project.scripts]

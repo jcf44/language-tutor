@@ -21,6 +21,7 @@ from language_tutor.models.dialogue import Dialogue, DialogueRole
 from language_tutor.services.audio_service import AudioService
 from language_tutor.services.dialogue_service import DialogueService
 from language_tutor.services.file_service import FileService
+from language_tutor.services.stt_service import STTService
 
 
 class LanguageTutorUI:
@@ -32,6 +33,7 @@ class LanguageTutorUI:
         self.dialogue_service = None
         self.file_service = None
         self.audio_service = None
+        self.stt_service = None
         self._initialize_services()
 
     def _initialize_services(self):
@@ -42,6 +44,7 @@ class LanguageTutorUI:
         self.dialogue_service = DialogueService(self.config)
         self.file_service = FileService()
         self.audio_service = AudioService(self.config)
+        self.stt_service = STTService(self.config)
 
     def run(self):
         """Run the Streamlit application."""
@@ -306,11 +309,25 @@ class LanguageTutorUI:
             st.session_state.practice_messages = []
             st.success(
                 "Practice session started! Type your first message below."
-            )
-
-        # Practice interface
+            )  # Practice interface
         if st.session_state.practice_dialogue:
             st.markdown("---")
+
+            # Voice input instructions
+            with st.expander("🎤 Voice Input Help"):
+                st.markdown("""
+                **How to use voice input:**
+                1. Click "🔧 Test Mic" to check your microphone
+                2. Click "🎤 Record" and speak clearly in French
+                3. The app will listen for 10 seconds maximum
+                4. Your speech will be converted to text automatically
+                
+                **Tips for best results:**
+                - Speak clearly and at normal speed
+                - Minimize background noise
+                - Grant microphone permissions when prompted
+                - Use French pronunciation
+                """)
 
             # Display conversation history
             for msg in st.session_state.practice_messages:
@@ -322,9 +339,81 @@ class LanguageTutorUI:
                         if "audio_path" in msg and msg["audio_path"]:
                             st.audio(msg["audio_path"])
 
-            # User input
-            user_input = st.chat_input("Type your message in French...")
+            # User input options
+            st.markdown("#### 💬 Your Response")
 
+            # Create columns for text input and voice input
+            col1, col2 = st.columns([4, 1])
+
+            with col1:
+                user_input = st.text_input(
+                    "Type your message in French:",
+                    key="practice_text_input",
+                    placeholder="Tapez votre message ici...",
+                )
+
+            with col2:
+                st.markdown("**Or use voice:**")
+
+                # Microphone test button
+                if st.button(
+                    "🔧 Test Mic",
+                    key="test_mic_btn",
+                    help="Test your microphone",
+                ):
+                    if hasattr(self, "stt_service"):
+                        try:
+                            mic_works, message = (
+                                self.stt_service.test_microphone()
+                            )
+                            if mic_works:
+                                st.success(f"🎤 {message}")
+                            else:
+                                st.error(f"❌ {message}")
+                        except Exception as e:
+                            st.error(f"Microphone test failed: {str(e)}")
+                    else:
+                        st.error("STT service not available")
+
+                # Voice record button
+                if st.button(
+                    "🎤 Record",
+                    key="voice_record_btn",
+                    help="Click and speak in French",
+                ):
+                    if hasattr(self, "stt_service"):
+                        with st.spinner("🎧 Listening... Speak now!"):
+                            try:
+                                # Listen for speech
+                                voice_text = asyncio.run(
+                                    self.stt_service.listen_for_speech(
+                                        timeout=3,
+                                        phrase_time_limit=10,
+                                        language="fr-FR",
+                                    )
+                                )
+
+                                if voice_text:
+                                    st.success(f"Heard: {voice_text}")
+                                    # Set the voice input as the user input
+                                    user_input = voice_text
+                                    # Update the text input
+                                    st.session_state.practice_text_input = (
+                                        voice_text
+                                    )
+                                    st.rerun()
+                                else:
+                                    st.warning(
+                                        "No speech detected. Try again."
+                                    )
+
+                            except Exception as e:
+                                st.error(f"Speech error: {str(e)}")
+                                st.info("💡 Make sure your microphone works.")
+                    else:
+                        st.error("Speech recognition not available.")
+
+            # Process user input (from keyboard or voice)
             if user_input:
                 # Add user message
                 st.session_state.practice_messages.append(
