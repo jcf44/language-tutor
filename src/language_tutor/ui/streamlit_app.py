@@ -669,11 +669,16 @@ class LanguageTutorUI:
                 st.rerun()
                 return
         # Display rule chat
-        for msg in st.session_state.grammar_rule_chat:
+        for idx, msg in enumerate(st.session_state.grammar_rule_chat):
             if msg["role"] == "user":
                 st.chat_message("user").write(msg["content"])
             else:
-                st.chat_message("assistant").write(msg["content"])
+                with st.chat_message("assistant"):
+                    st.write(msg["content"])
+                    # Copy-to-clipboard icon for markdown (uses Streamlit's st.code for easy manual copy)
+                    copy_md = f"```markdown\n{msg['content']}\n```"
+                    with st.expander("📋 Copy as Markdown", expanded=False):
+                        st.code(copy_md, language="markdown")
 
     def _answer_grammar_question(self, question):
         # Use the LLM via DialogueService to answer grammar questions
