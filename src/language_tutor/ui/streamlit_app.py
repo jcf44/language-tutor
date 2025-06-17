@@ -280,183 +280,195 @@ class LanguageTutorUI:
     def _render_practice_mode_tab(self):
         """Render the interactive practice mode tab."""
         st.header("💬 Practice Mode")
+        try:
+            # Initialize practice dialogue if not exists
+            if "practice_dialogue" not in st.session_state:
+                st.session_state.practice_dialogue = None
+                st.session_state.practice_messages = []
 
-        # Initialize practice dialogue if not exists
-        if "practice_dialogue" not in st.session_state:
-            st.session_state.practice_dialogue = None
-            st.session_state.practice_messages = []
-
-        # Start new practice session
-        col1, col2 = st.columns([3, 1])
-
-        with col1:
-            practice_topic = st.text_input(
-                "Practice Topic", placeholder="e.g., Asking for directions"
-            )
-
-        with col2:
-            practice_level = st.selectbox(
-                "Level",
-                options=["beginner", "intermediate", "advanced"],
-                key="practice_level",
-            )
-
-        if st.button("🎯 Start Practice Session") and practice_topic:
-            # Initialize practice dialogue
-            st.session_state.practice_dialogue = Dialogue(
-                title=practice_topic, level=practice_level
-            )
-            st.session_state.practice_messages = []
-            st.success(
-                "Practice session started! Type your first message below."
-            )  # Practice interface
-        if st.session_state.practice_dialogue:
-            st.markdown("---")
-
-            # Voice input instructions
-            with st.expander("🎤 Voice Input Help"):
-                st.markdown("""
-                **How to use voice input:**
-                1. Click "🔧 Test Mic" to check your microphone
-                2. Click "🎤 Record" and speak clearly in French
-                3. The app will listen for 10 seconds maximum
-                4. Your speech will be converted to text automatically
-                
-                **Tips for best results:**
-                - Speak clearly and at normal speed
-                - Minimize background noise
-                - Grant microphone permissions when prompted
-                - Use French pronunciation
-                """)
-
-            # Display conversation history
-            for msg in st.session_state.practice_messages:
-                if msg["role"] == "user":
-                    st.chat_message("user").write(msg["content"])
-                else:
-                    with st.chat_message("assistant"):
-                        st.write(msg["content"])
-                        if "audio_path" in msg and msg["audio_path"]:
-                            st.audio(msg["audio_path"])
-
-            # User input options
-            st.markdown("#### 💬 Your Response")
-
-            # Create columns for text input and voice input
-            col1, col2 = st.columns([4, 1])
+            # Start new practice session
+            col1, col2 = st.columns([3, 1])
 
             with col1:
-                user_input = st.text_input(
-                    "Type your message in French:",
-                    key="practice_text_input",
-                    placeholder="Tapez votre message ici...",
+                practice_topic = st.text_input(
+                    "Practice Topic", placeholder="e.g., Asking for directions"
                 )
 
             with col2:
-                st.markdown("**Or use voice:**")
+                practice_level = st.selectbox(
+                    "Level",
+                    options=["beginner", "intermediate", "advanced"],
+                    key="practice_level",
+                )
 
-                # Microphone test button
-                if st.button(
-                    "🔧 Test Mic",
-                    key="test_mic_btn",
-                    help="Test your microphone",
-                ):
-                    if hasattr(self, "stt_service"):
+            if st.button("🎯 Start Practice Session") and practice_topic:
+                try:
+                    st.write("[DEBUG] Creating Dialogue object...")
+                    st.session_state.practice_dialogue = Dialogue(
+                        title=practice_topic, level=practice_level
+                    )
+                    st.session_state.practice_messages = []
+                    st.success(
+                        "Practice session started! Type your first message below."
+                    )
+                except Exception as e:
+                    st.error(f"❌ Failed to start practice session: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
+                    print("[PracticeMode] Dialogue creation error:", e)
+                    return
+
+            # Practice interface
+            if st.session_state.practice_dialogue:
+                st.markdown("---")
+
+                # Voice input instructions
+                with st.expander("🎤 Voice Input Help"):
+                    st.markdown("""
+                    **How to use voice input:**
+                    1. Click "🔧 Test Mic" to check your microphone
+                    2. Click "🎤 Record" and speak clearly in French
+                    3. The app will listen for 10 seconds maximum
+                    4. Your speech will be converted to text automatically
+                    
+                    **Tips for best results:**
+                    - Speak clearly and at normal speed
+                    - Minimize background noise
+                    - Grant microphone permissions when prompted
+                    - Use French pronunciation
+                    """)
+
+                # Display conversation history
+                for msg in st.session_state.practice_messages:
+                    if msg["role"] == "user":
+                        st.chat_message("user").write(msg["content"])
+                    else:
+                        with st.chat_message("assistant"):
+                            st.write(msg["content"])
+                            if "audio_path" in msg and msg["audio_path"]:
+                                st.audio(msg["audio_path"])
+
+                # --- Robust input processing: use a flag to trigger processing ---
+                if "practice_input_to_process" not in st.session_state:
+                    st.session_state.practice_input_to_process = False
+
+                # If flag is set, process input, clear input and flag, then return
+                if st.session_state.practice_input_to_process:
+                    user_input = st.session_state.practice_text_input
+                    last_user_msg = next((m for m in reversed(st.session_state.practice_messages) if m["role"] == "user"), None)
+                    if user_input and (not last_user_msg or last_user_msg["content"] != user_input):
                         try:
-                            mic_works, message = (
-                                self.stt_service.test_microphone()
-                            )
-                            if mic_works:
-                                st.success(f"🎤 {message}")
-                            else:
-                                st.error(f"❌ {message}")
-                        except Exception as e:
-                            st.error(f"Microphone test failed: {str(e)}")
-                    else:
-                        st.error("STT service not available")
+                            st.session_state.practice_messages.append({"role": "user", "content": user_input})
+                            st.session_state.practice_dialogue.add_message(DialogueRole.USER, user_input)
+                            with st.spinner("Generating response..."):
+                                try:
+                                    if self.dialogue_service:
+                                        response = asyncio.run(
+                                            self.dialogue_service.continue_dialogue(
+                                                st.session_state.practice_dialogue, user_input
+                                            )
+                                        )
+                                    else:
+                                        response = "Service not available. Please refresh and try again."
+                                    st.session_state.practice_dialogue.add_message(DialogueRole.ASSISTANT, response)
+                                    audio_path = None
+                                    if self.audio_service:
+                                        try:
+                                            audio_path = asyncio.run(
+                                                self.audio_service.create_temporary_audio(response)
+                                            )
+                                        except Exception as audio_e:
+                                            st.warning(f"Could not generate audio: {str(audio_e)}")
+                                    st.session_state.practice_messages.append({
+                                        "role": "assistant",
+                                        "content": response,
+                                        "audio_path": audio_path,
+                                    })
+                                except Exception as dialogue_e:
+                                    st.error(f"Error generating response: {str(dialogue_e)}")
+                                    st.info("💡 Please try again or refresh the page.")
+                        except Exception as input_e:
+                            st.error(f"Error processing input: {str(input_e)}")
+                            st.info("💡 Please try again.")
+                    # Clear input and flag before rerun
+                    st.session_state.practice_text_input = ""
+                    st.session_state.practice_input_to_process = False
+                    st.rerun()
+                    return
 
-                # Voice record button
-                if st.button(
-                    "🎤 Record",
-                    key="voice_record_btn",
-                    help="Click and speak in French",
-                ):
-                    if hasattr(self, "stt_service"):
-                        with st.spinner("🎧 Listening... Speak now!"):
-                            try:
-                                # Listen for speech
-                                voice_text = asyncio.run(
-                                    self.stt_service.listen_for_speech(
-                                        timeout=3,
-                                        phrase_time_limit=10,
-                                        language="fr-FR",
-                                    )
-                                )
-
-                                if voice_text:
-                                    st.success(f"Heard: {voice_text}")
-                                    # Set the voice input as the user input
-                                    user_input = voice_text
-                                    # Update the text input
-                                    st.session_state.practice_text_input = (
-                                        voice_text
-                                    )
-                                    st.rerun()
-                                else:
-                                    st.warning(
-                                        "No speech detected. Try again."
-                                    )
-
-                            except Exception as e:
-                                st.error(f"Speech error: {str(e)}")
-                                st.info("💡 Make sure your microphone works.")
-                    else:
-                        st.error("Speech recognition not available.")
-
-            # Process user input (from keyboard or voice)
-            if user_input:
-                # Add user message
-                st.session_state.practice_messages.append(
-                    {"role": "user", "content": user_input}
-                )
-
-                # Add message to dialogue
-                st.session_state.practice_dialogue.add_message(
-                    DialogueRole.USER, user_input
-                )
-
-                # Generate AI response
-                with st.spinner("Generating response..."):
-                    try:
-                        response = asyncio.run(
-                            self.dialogue_service.continue_dialogue(
-                                st.session_state.practice_dialogue, user_input
-                            )
-                        )
-
-                        # Add AI message to dialogue
-                        st.session_state.practice_dialogue.add_message(
-                            DialogueRole.ASSISTANT, response
-                        )
-
-                        # Generate audio for response
-                        audio_path = asyncio.run(
-                            self.audio_service.create_temporary_audio(response)
-                        )
-
-                        # Add to messages
-                        st.session_state.practice_messages.append(
-                            {
-                                "role": "assistant",
-                                "content": response,
-                                "audio_path": audio_path,
-                            }
-                        )
-
+                # User input options
+                st.markdown("#### 💬 Your Response")
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    user_input = st.text_input(
+                        "Type your message in French:",
+                        key="practice_text_input",
+                        placeholder="Tapez votre message ici...",
+                    )
+                    # If user presses enter or submits, set flag to process input
+                    if user_input and st.session_state.practice_text_input == user_input and st.session_state.practice_input_to_process is False:
+                        st.session_state.practice_input_to_process = True
                         st.rerun()
+                        return
+                with col2:
+                    st.markdown("**Or use voice:**")
+                    # Microphone test button
+                    if st.button(
+                        "🔧 Test Mic",
+                        key="test_mic_btn",
+                        help="Test your microphone",
+                    ):
+                        if hasattr(self, "stt_service"):
+                            try:
+                                mic_works, message = (
+                                    self.stt_service.test_microphone()
+                                )
+                                if mic_works:
+                                    st.success(f"🎤 {message}")
+                                else:
+                                    st.error(f"❌ {message}")
+                            except Exception as e:
+                                st.error(f"Microphone test failed: {str(e)}")
+                        else:
+                            st.error("STT service not available")
+                    # Voice record button
+                    if st.button(
+                        "🎤 Record",
+                        key="voice_record_btn",
+                        help="Click and speak in French",
+                    ):
+                        if hasattr(self, "stt_service"):
+                            with st.spinner("🎧 Listening... Speak now!"):
+                                try:
+                                    voice_text = asyncio.run(
+                                        self.stt_service.listen_for_speech(
+                                            timeout=3,
+                                            phrase_time_limit=10,
+                                            language="fr-FR",
+                                        )
+                                    )
+                                    if voice_text:
+                                        st.success(f"Heard: {voice_text}")
+                                        st.session_state.practice_text_input = voice_text
+                                        st.session_state.practice_input_to_process = True
+                                        st.rerun()
+                                        return
+                                    else:
+                                        st.warning(
+                                            "No speech detected. Try again."
+                                        )
+                                except Exception as e:
+                                    st.error(f"Speech error: {str(e)}")
+                                    st.info("💡 Make sure your microphone works.")
+                        else:
+                            st.error("Speech recognition not available.")
 
-                    except Exception as e:
-                        st.error(f"Error generating response: {str(e)}")
+        except Exception as e:
+            st.error(f"❌ Practice Mode crashed: {str(e)}")
+            import traceback
+            st.code(traceback.format_exc())
+            print("[PracticeMode] Tab error:", e)
+            return
 
     def _render_audio_library_tab(self):
         """Render the audio library tab."""

@@ -15,16 +15,11 @@ class STTService:
         """Initialize the STT service with configuration."""
         self.config = config
         self.recognizer = sr.Recognizer()
-        self.microphone = sr.Microphone()
 
-        # Adjust for ambient noise on initialization
-        self._calibrate_microphone()
-
-    def _calibrate_microphone(self):
+    def _calibrate_microphone(self, microphone):
         """Calibrate microphone for ambient noise."""
         try:
-            with self.microphone as source:
-                # Adjust for ambient noise for 1 second
+            with microphone as source:
                 self.recognizer.adjust_for_ambient_noise(source, duration=1)
         except Exception as e:
             print(f"Warning: Could not calibrate microphone: {str(e)}")
@@ -47,9 +42,10 @@ class STTService:
             str: Recognized text or None if no speech detected
         """
         try:
-            # Listen for audio
-            with self.microphone as source:
-                # Listen for speech
+            with sr.Microphone() as source:
+                self._calibrate_microphone(source)
+
+                # Listen for audio
                 audio = self.recognizer.listen(
                     source,
                     timeout=timeout,
@@ -130,12 +126,14 @@ class STTService:
             ):
                 microphone_list.append({"index": index, "name": name})
 
-            return {
-                "microphones": microphone_list,
-                "default_index": self.microphone.device_index,
-                "sample_rate": self.microphone.SAMPLE_RATE,
-                "chunk_size": self.microphone.CHUNK,
-            }
+            # Use a temporary microphone instance to get info
+            with sr.Microphone() as mic:
+                return {
+                    "microphones": microphone_list,
+                    "default_index": mic.device_index,
+                    "sample_rate": mic.SAMPLE_RATE,
+                    "chunk_size": mic.CHUNK,
+                }
 
         except Exception as e:
             return {"error": str(e)}
@@ -165,7 +163,7 @@ class STTService:
 
             # Test basic microphone access without requiring speech
             try:
-                with self.microphone as source:
+                with sr.Microphone() as source:
                     # Just test that we can access the microphone
                     self.recognizer.adjust_for_ambient_noise(
                         source, duration=0.1
@@ -182,16 +180,6 @@ class STTService:
         except ImportError:
             return False, "PyAudio not installed. Run: pip install pyaudio"
         except OSError as e:
-            if "No Default Input Device Available" in str(e):
-                return (
-                    False,
-                    "No default microphone set in system audio settings",
-                )
-            elif "Invalid device" in str(e):
-                return False, "Microphone device error. Check audio drivers"
-            else:
-                return False, f"Audio system error: {str(e)}"
-        except Exception as e:
-            return False, f"Hardware test failed: {str(e)}"
+            return False, f"Microphone error: {str(e)}"
         except Exception as e:
             return False, f"Hardware test failed: {str(e)}"
