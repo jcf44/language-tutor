@@ -20,10 +20,9 @@ class ConfigManager:
 
     def load_config(self) -> AppConfig:
         """Load configuration from environment variables."""
-        return AppConfig(
-            # LLM Configuration
+        return AppConfig(  # LLM Configuration
             llm_provider=LLMProvider(
-                os.getenv("LANG_TUTOR_LLM_PROVIDER", "openai")
+                os.getenv("LANG_TUTOR_LLM_PROVIDER", "gemini")
             ),
             openai_api_key=os.getenv("LANG_TUTOR_OPENAI_API_KEY"),
             gemini_api_key=os.getenv("LANG_TUTOR_GEMINI_API_KEY"),

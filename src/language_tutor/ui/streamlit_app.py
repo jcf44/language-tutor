@@ -235,7 +235,13 @@ class LanguageTutorUI:
                                 tmp_path
                             )
                         )
-                    else:  # txt, md
+                    elif file_ext == "md":
+                        dialogue = asyncio.run(
+                            self.file_service.import_dialogue_from_markdown(
+                                tmp_path
+                            )
+                        )
+                    else:  # txt
                         dialogue = asyncio.run(
                             self.file_service.import_dialogue_from_text(
                                 tmp_path

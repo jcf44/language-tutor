@@ -98,7 +98,7 @@ class AudioService:
 
                     # Use different voice names for different speakers
                     speaker_voice = voice_name or message.role.value
-                    
+
                     # Generate audio for this message with role-specific voice
                     file_path = await self.generate_audio_for_text(
                         text=message.content,

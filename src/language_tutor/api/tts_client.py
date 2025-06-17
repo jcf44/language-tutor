@@ -278,18 +278,22 @@ class GTTSClient(TTSClient):
         try:
             # Map voice names to different language variants for variety
             voice_lang_map = {
-                "user": "fr",      # Standard French
+                "user": "fr",  # Standard French
                 "assistant": "fr-CA",  # Canadian French for variety
-                "default": "fr"
+                "default": "fr",
             }
-            
+
             # Select language variant based on voice_name
             if voice_name and voice_name.lower() in voice_lang_map:
                 lang_code = voice_lang_map[voice_name.lower()]
             else:
                 # Extract language code from language_code parameter
-                lang_code = language_code.split('-')[0] if '-' in language_code else "fr"
-            
+                lang_code = (
+                    language_code.split("-")[0]
+                    if "-" in language_code
+                    else "fr"
+                )
+
             # Use gTTS to generate speech with selected language variant
             tts = gTTS(text=text, lang=lang_code, slow=False)
 
@@ -325,9 +329,9 @@ class GTTSClient(TTSClient):
         """Get available voices for gTTS."""
         # Return role-based voice options that map to different accents
         return [
-            "user",        # Maps to standard French (fr)
-            "assistant",   # Maps to Canadian French (fr-CA)
-            "default"      # Maps to standard French (fr)
+            "user",  # Maps to standard French (fr)
+            "assistant",  # Maps to Canadian French (fr-CA)
+            "default",  # Maps to standard French (fr)
         ]
 
 

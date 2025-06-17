@@ -174,7 +174,7 @@ Règles importantes:
 class GeminiClient(LLMClient):
     """Google Gemini client for dialogue generation."""
 
-    def __init__(self, api_key: str, model: str = "gemini-pro"):
+    def __init__(self, api_key: str, model: str = "gemini-1.5-flash"):
         """Initialize the Gemini client."""
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(model)

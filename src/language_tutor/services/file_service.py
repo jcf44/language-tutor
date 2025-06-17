@@ -3,6 +3,7 @@
 import csv
 import json
 import os
+import re
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -30,6 +31,21 @@ class FileService:
 
         except Exception as e:
             raise Exception(f"Error importing dialogue from text: {str(e)}")
+
+    async def import_dialogue_from_markdown(self, file_path: str) -> Dialogue:
+        """Import dialogue from a markdown file with enhanced parsing."""
+        try:
+            with open(file_path, "r", encoding="utf-8") as file:
+                content = file.read()
+
+            return self._parse_markdown_dialogue(
+                content, os.path.basename(file_path)
+            )
+
+        except Exception as e:
+            raise Exception(
+                f"Error importing dialogue from markdown: {str(e)}"
+            )
 
     async def import_dialogue_from_json(self, file_path: str) -> Dialogue:
         """Import dialogue from a JSON file."""
@@ -229,6 +245,110 @@ class FileService:
                     else DialogueRole.ASSISTANT
                 )
                 dialogue.add_message(role, line)
+
+        return dialogue
+
+    def _parse_markdown_dialogue(
+        self, content: str, filename: str
+    ) -> Dialogue:
+        """Parse markdown content into a Dialogue object with enhanced formatting support."""
+        # Extract title from first # heading if present
+        title_match = re.match(r"^#\s+(.+)$", content, re.MULTILINE)
+        title = title_match.group(1) if title_match else filename
+
+        # Extract level from metadata if present
+        level_match = re.search(
+            r"\*\*(?:Level|Niveau):\*\*\s*(\w+)", content, re.IGNORECASE
+        )
+        level = level_match.group(1).lower() if level_match else "beginner"
+
+        # Extract context from metadata if present
+        context_match = re.search(
+            r"\*\*(?:Context|Contexte):\*\*\s*(.+?)(?:\n\n|\n---|\Z)",
+            content,
+            re.IGNORECASE | re.DOTALL,
+        )
+        context = context_match.group(1).strip() if context_match else None
+
+        dialogue = Dialogue(title=title, level=level, context=context)
+
+        # Split content into lines and process
+        lines = content.split("\n")
+
+        for line in lines:
+            line = line.strip()
+
+            # Skip empty lines, headers, metadata, and separators
+            if (
+                not line
+                or line.startswith("#")
+                or line.startswith("---")
+                or ("level:" in line.lower() and "**" in line)
+                or ("context:" in line.lower() and "**" in line)
+            ):
+                continue
+
+            # Handle markdown speaker format: **Speaker:** or *Speaker:*
+            speaker_match = re.match(r"\*{1,2}(.+?):\*{1,2}\s*(.+)", line)
+            if speaker_match:
+                speaker = speaker_match.group(1).strip().lower()
+                message = speaker_match.group(2).strip()
+            elif ":" in line:
+                # Handle regular speaker format: Speaker: message
+                speaker, message = line.split(":", 1)
+                speaker = speaker.strip().lower()
+                message = message.strip()
+            else:
+                # No speaker format, skip this line
+                continue
+
+            # Clean up markdown formatting from message
+            if message:
+                # Remove markdown formatting but keep the text
+                message = re.sub(
+                    r"\*{1,2}(.+?)\*{1,2}", r"\1", message
+                )  # Bold/italic
+                message = re.sub(r"`(.+?)`", r"\1", message)  # Code
+                message = re.sub(r"\[(.+?)\]\(.+?\)", r"\1", message)  # Links
+
+                # Determine speaker role
+                if speaker:
+                    if any(
+                        word in speaker
+                        for word in [
+                            "user",
+                            "utilisateur",
+                            "client",
+                            "étudiant",
+                            "student",
+                        ]
+                    ):
+                        role = DialogueRole.USER
+                    elif any(
+                        word in speaker
+                        for word in [
+                            "assistant",
+                            "tuteur",
+                            "prof",
+                            "teacher",
+                            "tutor",
+                        ]
+                    ):
+                        role = DialogueRole.ASSISTANT
+                    else:
+                        # Default alternating
+                        last_role = (
+                            dialogue.messages[-1].role
+                            if dialogue.messages
+                            else DialogueRole.ASSISTANT
+                        )
+                        role = (
+                            DialogueRole.USER
+                            if last_role == DialogueRole.ASSISTANT
+                            else DialogueRole.ASSISTANT
+                        )
+
+                    dialogue.add_message(role, message)
 
         return dialogue
 

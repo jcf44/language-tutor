@@ -23,10 +23,9 @@ class TTSProvider(str, Enum):
 
 
 class AppConfig(BaseModel):
-    """Application configuration model."""
+    """Application configuration model."""  # LLM Configuration
 
-    # LLM Configuration
-    llm_provider: LLMProvider = Field(default=LLMProvider.OPENAI)
+    llm_provider: LLMProvider = Field(default=LLMProvider.GEMINI)
     openai_api_key: Optional[str] = Field(default=None)
     gemini_api_key: Optional[str] = Field(default=None)  # TTS Configuration
     tts_provider: TTSProvider = Field(default=TTSProvider.GTTS)
