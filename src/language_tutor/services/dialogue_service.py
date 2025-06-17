@@ -68,6 +68,20 @@ class DialogueService:
         except Exception as e:
             raise Exception(f"Failed to continue dialogue: {str(e)}")
 
+    async def ask_grammar_question(self, question: str) -> str:
+        """Ask a grammar question using the LLM client."""
+        prompt = (
+            "You are a helpful French grammar tutor. "
+            "Answer the following grammar question in clear, concise English. "
+            "If possible, provide examples.\n\n"
+            f"Question: {question}"
+        )
+        try:
+            answer = await self.llm_client.ask_question(prompt)
+            return answer
+        except Exception as e:
+            return f"[Error from LLM: {str(e)}]"
+
     def validate_dialogue_parameters(
         self, topic: str, level: str, num_exchanges: int
     ) -> Dict[str, Any]:

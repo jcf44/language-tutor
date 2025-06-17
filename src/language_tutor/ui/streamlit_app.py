@@ -57,12 +57,13 @@ class LanguageTutorUI:
         self._render_sidebar()
 
         # Main content area
-        tab1, tab2, tab3, tab4 = st.tabs(
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(
             [
                 "Generate Dialogue",
                 "Import Dialogue",
                 "Practice Mode",
                 "Audio Library",
+                "Grammar Help",
             ]
         )
 
@@ -77,6 +78,9 @@ class LanguageTutorUI:
 
         with tab4:
             self._render_audio_library_tab()
+
+        with tab5:
+            self._render_grammar_tab()
 
     def _render_sidebar(self):
         """Render the sidebar with configuration options."""
@@ -591,6 +595,94 @@ class LanguageTutorUI:
 
                         except Exception as e:
                             st.error(f"Export error: {str(e)}")
+
+    def _render_grammar_tab(self):
+        """Render the Grammar tab with chat-like UI for questions and rules."""
+        st.header("📚 Grammar Help")
+        st.markdown("Ask a grammar question or explore common French grammar rules.")
+
+        # --- Grammar Question Chat ---
+        st.subheader("Ask a Grammar Question")
+        if "grammar_chat" not in st.session_state:
+            st.session_state.grammar_chat = []
+        # --- Robust input processing for grammar question ---
+        if "grammar_question_to_process" not in st.session_state:
+            st.session_state.grammar_question_to_process = False
+        if st.session_state.grammar_question_to_process:
+            grammar_question = st.session_state.grammar_question_input
+            if grammar_question:
+                answer = self._answer_grammar_question(grammar_question)
+                st.session_state.grammar_chat.append({"role": "user", "content": grammar_question})
+                st.session_state.grammar_chat.append({"role": "assistant", "content": answer})
+            st.session_state.grammar_question_input = ""
+            st.session_state.grammar_question_to_process = False
+            st.rerun()
+            return
+
+        grammar_question = st.text_input("Type your grammar question:", key="grammar_question_input", placeholder="e.g., When do I use 'le' vs 'la'?")
+        if st.button("Ask Grammar Question") and grammar_question:
+            st.session_state.grammar_question_to_process = True
+            st.rerun()
+            return
+        # Display chat
+        for msg in st.session_state.grammar_chat:
+            if msg["role"] == "user":
+                st.chat_message("user").write(msg["content"])
+            else:
+                st.chat_message("assistant").write(msg["content"])
+
+        st.markdown("---")
+        # --- Grammar Rules List ---
+        st.subheader("Most Used Grammar Rules")
+        grammar_rules = [
+            {"title": "Gender of Nouns (le/la)", "doc": "In French, nouns are either masculine (le) or feminine (la). For example: le livre (the book), la table (the table)."},
+            {"title": "Verb Conjugation: Être & Avoir", "doc": "Être (to be) and Avoir (to have) are the two most important verbs. Example: Je suis (I am), Tu as (You have)."},
+            {"title": "Adjective Agreement", "doc": "Adjectives must agree in gender and number with the noun. Example: un livre intéressant, une table intéressante."},
+            {"title": "Negation (ne...pas)", "doc": "To make a sentence negative, wrap the verb with ne...pas. Example: Je ne parle pas français."},
+            {"title": "Question Formation", "doc": "You can ask questions by inverting subject and verb, or using 'est-ce que'. Example: Parlez-vous français ? / Est-ce que vous parlez français ?"},
+            {"title": "Definite & Indefinite Articles", "doc": "le, la, les (the); un, une, des (a, an, some)."},
+            {"title": "Prepositions of Place", "doc": "à (at), dans (in), sur (on), sous (under), devant (in front of), derrière (behind)."},
+            {"title": "Possessive Adjectives", "doc": "mon, ma, mes (my); ton, ta, tes (your); son, sa, ses (his/her)."},
+            {"title": "Reflexive Verbs", "doc": "Verbs used with 'se' (oneself). Example: se laver (to wash oneself)."},
+            {"title": "Past Tense: Passé Composé", "doc": "Formed with être or avoir + past participle. Example: J'ai mangé (I ate), Je suis allé(e) (I went)."},
+            {"title": "Future Tense: Futur Proche", "doc": "Formed with aller + infinitive. Example: Je vais manger (I am going to eat)."},
+            {"title": "Direct & Indirect Objects", "doc": "me, te, le, la, nous, vous, les (direct); lui, leur (indirect)."},
+            {"title": "Impersonal Expressions", "doc": "Il faut (it is necessary), Il y a (there is/are)."},
+            {"title": "Demonstrative Adjectives", "doc": "ce, cet, cette, ces (this/that/these/those)."},
+            {"title": "Relative Pronouns", "doc": "qui, que, où (who, that, where)."},
+            {"title": "Imperative Mood", "doc": "Used for commands. Example: Parle! (Speak!), Finissez! (Finish!)"},
+            {"title": "Partitive Articles", "doc": "du, de la, de l', des (some/any)."},
+            {"title": "Numbers & Counting", "doc": "un, deux, trois...; premier, deuxième... (first, second...)."},
+            {"title": "Time Expressions", "doc": "aujourd'hui (today), demain (tomorrow), hier (yesterday)."},
+            {"title": "Common Irregular Verbs", "doc": "aller, faire, venir, pouvoir, vouloir, devoir, etc."},
+        ]
+        if "grammar_rule_chat" not in st.session_state:
+            st.session_state.grammar_rule_chat = []
+        # Organize buttons in 3 columns
+        cols = st.columns(3)
+        for i, rule in enumerate(grammar_rules):
+            col = cols[i % 3]
+            if col.button(rule["title"], key=f"grammar_rule_{i}"):
+                st.session_state.grammar_rule_chat.append({"role": "user", "content": rule["title"]})
+                answer = self._answer_grammar_question(rule["title"])
+                st.session_state.grammar_rule_chat.append({"role": "assistant", "content": answer})
+                st.rerun()
+                return
+        # Display rule chat
+        for msg in st.session_state.grammar_rule_chat:
+            if msg["role"] == "user":
+                st.chat_message("user").write(msg["content"])
+            else:
+                st.chat_message("assistant").write(msg["content"])
+
+    def _answer_grammar_question(self, question):
+        # Use the LLM via DialogueService to answer grammar questions
+        try:
+            import asyncio
+            answer = asyncio.run(self.dialogue_service.ask_grammar_question(question))
+            return answer
+        except Exception as e:
+            return f"[Error: {str(e)}]"
 
     def _display_dialogue(self, dialogue: Dialogue):
         """Display a dialogue in a formatted way."""

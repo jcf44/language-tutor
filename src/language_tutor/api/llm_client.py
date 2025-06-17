@@ -31,6 +31,11 @@ class LLMClient(ABC):
         """Continue an existing dialogue with user input."""
         pass
 
+    @abstractmethod
+    async def ask_question(self, prompt: str) -> str:
+        """Ask a single-turn question (for grammar Q&A) using the LLM."""
+        pass
+
 
 class OpenAIClient(LLMClient):
     """OpenAI GPT client for dialogue generation."""
@@ -119,6 +124,19 @@ Le dialogue doit être naturel et approprié pour le niveau {level}."""
 
         except Exception as e:
             raise Exception(f"Error continuing dialogue with OpenAI: {str(e)}")
+
+    async def ask_question(self, prompt: str) -> str:
+        """Ask a single-turn question (for grammar Q&A) using OpenAI."""
+        completion = await self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": "You are a helpful French grammar tutor."},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=512,
+            temperature=0.2,
+        )
+        return completion.choices[0].message.content.strip()
 
     def _create_system_prompt(
         self, level: str, context: Optional[str] = None
@@ -252,6 +270,16 @@ Répondez naturellement en français pour continuer la conversation."""
 
         except Exception as e:
             raise Exception(f"Error continuing dialogue with Gemini: {str(e)}")
+
+    async def ask_question(self, prompt: str) -> str:
+        """Ask a single-turn question (for grammar Q&A) using Gemini."""
+        # Gemini API is synchronous, so run in thread
+        import asyncio
+        loop = asyncio.get_event_loop()
+        def sync_call():
+            response = self.model.generate_content(prompt)
+            return response.text.strip()
+        return await loop.run_in_executor(None, sync_call)
 
     def _create_system_prompt(
         self, level: str, context: Optional[str] = None
