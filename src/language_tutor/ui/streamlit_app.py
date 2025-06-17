@@ -396,6 +396,14 @@ class LanguageTutorUI:
                     st.rerun()
                     return
 
+                # --- Handle voice input result before rendering widget ---
+                if "practice_voice_result" in st.session_state and st.session_state.practice_voice_result:
+                    st.session_state.practice_text_input = st.session_state.practice_voice_result
+                    st.session_state.practice_input_to_process = True
+                    st.session_state.practice_voice_result = ""
+                    st.rerun()
+                    return
+
                 # User input options
                 st.markdown("#### 💬 Your Response")
                 col1, col2 = st.columns([4, 1])
@@ -449,8 +457,7 @@ class LanguageTutorUI:
                                     )
                                     if voice_text:
                                         st.success(f"Heard: {voice_text}")
-                                        st.session_state.practice_text_input = voice_text
-                                        st.session_state.practice_input_to_process = True
+                                        st.session_state.practice_voice_result = voice_text
                                         st.rerun()
                                         return
                                     else:
