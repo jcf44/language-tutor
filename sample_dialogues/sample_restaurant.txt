@@ -1,0 +1,10 @@
+Utilisateur: Bonjour, je voudrais une table pour deux personnes, s'il vous plaît.
+Serveur: Bonjour ! Bien sûr, avez-vous une réservation ?
+Utilisateur: Non, nous n'avons pas réservé. Est-ce que c'est possible quand même ?
+Serveur: Pas de problème, nous avons de la place. Suivez-moi, je vais vous installer.
+Utilisateur: Merci beaucoup. Pouvez-vous nous donner la carte, s'il vous plaît ?
+Serveur: Voici la carte. Je reviendrai dans quelques minutes pour prendre votre commande.
+Utilisateur: Parfait. Qu'est-ce que vous recommandez comme plat principal ?
+Serveur: Je vous recommande notre spécialité : le coq au vin. C'est délicieux !
+Utilisateur: Ça sonne bien ! Je vais prendre ça. Et pour boire ?
+Serveur: Nous avons une excellente sélection de vins. Préférez-vous du rouge ou du blanc ?

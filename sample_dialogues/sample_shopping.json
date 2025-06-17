@@ -1,0 +1,39 @@
+{
+    "title": "Shopping for Clothes",
+    "context": "A customer looking for clothes in a French boutique",
+    "level": "intermediate",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Bonjour, je cherche une robe pour une occasion spéciale."
+        },
+        {
+            "role": "assistant",
+            "content": "Bonjour madame ! Quelle est l'occasion ? Un mariage, un dînner ?"
+        },
+        {
+            "role": "user",
+            "content": "C'est pour un dîner d'anniversaire. Quelque chose d'élégant mais pas trop formel."
+        },
+        {
+            "role": "assistant",
+            "content": "Parfait ! Quelle taille faites-vous ? Et avez-vous une couleur préférée ?"
+        },
+        {
+            "role": "user",
+            "content": "Je fais du 38. J'aime bien le bleu marine ou le noir."
+        },
+        {
+            "role": "assistant",
+            "content": "Excellents choix ! J'ai exactement ce qu'il vous faut. Regardez cette robe bleu marine, elle est très élégante."
+        },
+        {
+            "role": "user",
+            "content": "Elle est magnifique ! Puis-je l'essayer ?"
+        },
+        {
+            "role": "assistant",
+            "content": "Bien sûr ! Les cabines d'essayage sont juste là. Prenez votre temps."
+        }
+    ]
+}

@@ -1,0 +1,9 @@
+speaker,message
+user,"Excusez-moi, pouvez-vous m'aider ? Je cherche la gare."
+assistant,"Bien sûr ! La gare n'est pas loin d'ici. Vous devez aller tout droit."
+user,"Tout droit ? Combien de temps cela prend-il à pied ?"
+assistant,"Environ dix minutes. Vous verrez un grand bâtiment avec une horloge."
+user,"Merci beaucoup ! Y a-t-il des bus qui vont à la gare ?"
+assistant,"Oui, le bus numéro 12 s'arrête juste devant. L'arrêt est là-bas."
+user,"Parfait ! À quelle fréquence passe-t-il ?"
+assistant,"Toutes les quinze minutes. Le prochain arrive dans cinq minutes."
